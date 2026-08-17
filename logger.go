@@ -1,15 +1,18 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 
 	"boot.dev/linko/internal/linkoerr"
+	"github.com/lmittmann/tint"
+	"github.com/mattn/go-isatty"
 	pkgerr "github.com/pkg/errors"
 )
+
+import "gopkg.in/natefinch/lumberjack.v2"
 
 type closeFunc func() error
 
@@ -58,19 +61,26 @@ func replaceAttr(groups []string, a slog.Attr) slog.Attr {
 }
 
 func initializeLogger() (*slog.Logger, closeFunc, error) {
-  logFile, err := os.OpenFile(os.Getenv("LINKO_LOG_FILE"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
-  if err != nil {
-	  return nil, nil, err
+	filename := os.Getenv("LINKO_LOG_FILE")
+	if filename == "" {
+		filename = "linko.access.log"
+	}
+  logger := &lumberjack.Logger{
+	  Filename:   filename,
+	  MaxSize:    1,
+	  MaxAge:     28,
+	  MaxBackups: 10,
+	  LocalTime:  false,
+	  Compress:   true,
   }
-
-	bufferedFile := bufio.NewWriterSize(logFile, 8192)
-
-	debugHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+	
+	debugHandler := slog.Handler(tint.NewTextHandler(os.Stderr, &tint.Options{
 	  Level: slog.LevelDebug,
 		ReplaceAttr: replaceAttr,
-  })
+		NoColor:     !(isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())),
+  }))
 
-  infoHandler := slog.NewJSONHandler(bufferedFile, &slog.HandlerOptions{
+  infoHandler := slog.NewJSONHandler(logger, &slog.HandlerOptions{
 	  Level: slog.LevelInfo,
 		ReplaceAttr: replaceAttr,
   })
@@ -79,6 +89,6 @@ func initializeLogger() (*slog.Logger, closeFunc, error) {
 	  debugHandler,
 	  infoHandler,
   )), 
-	bufferedFile.Flush, 
+	logger.Close,
 	nil
 }

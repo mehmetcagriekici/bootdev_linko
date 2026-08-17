@@ -74,6 +74,7 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 				slog.Int("request_body_bytes", spyReader.bytesRead),
 				slog.Int("response_status", spyWriter.statusCode),
 				slog.Int("response_body_bytes", spyWriter.bytesWritten),
+				slog.String("request_id", r.Header.Get("X-Request-ID")),
 			}		
 			if logContext.Username != "" {
 				attrs = append(attrs, slog.String("user", logContext.Username))

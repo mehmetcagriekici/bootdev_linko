@@ -39,12 +39,12 @@ func (s *server) authMiddleware(next http.Handler) http.Handler {
 			s.logger.Error("error validating password",
 				"user", username,
 				"error", err)
-			httpError(r.Context(), w, http.StatusInternalServerError, errors.New("internal server error"))
+			httpError(r.Context(), w, http.StatusInternalServerError, err)
 			return
 		}
 		if !ok {
 			s.logger.Error("error validating password", "user", username, "error", err)
-			httpError(r.Context(), w, http.StatusUnauthorized, errors.New("unauthorized"))
+			httpError(r.Context(), w, http.StatusUnauthorized, err)
 			return
 		}
 		r = r.WithContext(context.WithValue(r.Context(), UserContextKey, username))
