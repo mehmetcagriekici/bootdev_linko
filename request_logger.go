@@ -50,6 +50,18 @@ func httpError(ctx context.Context, w http.ResponseWriter, status int, err error
 	if logCtx, ok := ctx.Value(logContextKey).(*LogContext); ok {
 		logCtx.Error = err
 	}
+	if status == 401 {
+    http.Error(w, http.StatusText(status), status)
+		return
+	}
+	if status == 403 {
+    http.Error(w, http.StatusText(status), status)
+		return
+	}
+	if status == 500 {
+		http.Error(w, http.StatusText(status), status)
+		return
+	}
 	http.Error(w, err.Error(), status)
 }
 
@@ -69,13 +81,14 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			attrs := []any{
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
-				slog.String("client_ip", r.RemoteAddr),
+				slog.String("client_ip", redactIP(r.RemoteAddr)),
 				slog.Duration("duration", time.Since(start)),
 				slog.Int("request_body_bytes", spyReader.bytesRead),
 				slog.Int("response_status", spyWriter.statusCode),
 				slog.Int("response_body_bytes", spyWriter.bytesWritten),
 				slog.String("request_id", r.Header.Get("X-Request-ID")),
 			}		
+			
 			if logContext.Username != "" {
 				attrs = append(attrs, slog.String("user", logContext.Username))
 			}
